@@ -5,26 +5,72 @@
 
   // Robust bridge for API requests and save commands
   window.addEventListener("message", (event) => {
-    // 1. Forward MJML Render requests to background.js
-    if (event.data.type === "MJML_API_REQUEST") {
-      chrome.runtime.sendMessage(
-        { type: "RENDER_MJML", mjml: event.data.mjml },
-        (response) => {
-          window.postMessage(
-            { type: "MJML_API_RESPONSE", response: response },
-            "*"
+          // 3. MJML Template CRUD (Save, Get, Delete)
+          if (event.data.type === "GET_MJML_TEMPLATES") {
+            chrome.storage.local.get(['templates'], function (result) {
+              window.postMessage({ type: 'MJML_TEMPLATES_RESULT', templates: result.templates || [] }, '*');
+            });
+          }
+          if (event.data.type === "SAVE_MJML_TEMPLATE") {
+            chrome.storage.local.get(['templates'], function (result) {
+              let templates = result.templates || [];
+              const now = new Date().toISOString();
+              let existing = templates.find(t => t.name === event.data.template.name);
+              if (existing) {
+                existing.mjml = event.data.template.mjml;
+                existing.lastEdited = now;
+              } else {
+                let t = Object.assign({}, event.data.template);
+                t.created = now;
+                t.lastEdited = now;
+                templates.push(t);
+              }
+              chrome.storage.local.set({ templates }, function () {
+                window.postMessage({ type: 'SAVE_MJML_TEMPLATE_RESULT' }, '*');
+              });
+            });
+          }
+          if (event.data.type === "DELETE_MJML_TEMPLATE") {
+            chrome.storage.local.get(['templates'], function (result) {
+              let templates = (result.templates || []).filter(t => t.name !== event.data.name);
+              chrome.storage.local.set({ templates }, function () {
+                window.postMessage({ type: 'DELETE_MJML_TEMPLATE_RESULT' }, '*');
+              });
+            });
+          }
+    try {
+      // 1. Forward MJML Render requests to background.js
+      if (event.data.type === "MJML_API_REQUEST") {
+        if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
+          chrome.runtime.sendMessage(
+            { type: "RENDER_MJML", mjml: event.data.mjml },
+            (response) => {
+              window.postMessage(
+                { type: "MJML_API_RESPONSE", response: response },
+                "*"
+              );
+            }
           );
+        } else {
+          throw new Error("Extension context invalidated");
         }
-      );
-    }
+      }
 
-    // 2. Forward Save command to inject-mjml.js
-    if (event.data.type === "INSERT_MJML_HTML") {
-      window.dispatchEvent(
-        new CustomEvent("mjml-insert-to-ckeditor", {
-          detail: { html: event.data.html },
-        })
-      );
+      // 2. Forward Save command to inject-mjml.js
+      if (event.data.type === "INSERT_MJML_HTML") {
+        window.dispatchEvent(
+          new CustomEvent("mjml-insert-to-ckeditor", {
+            detail: { html: event.data.html },
+          })
+        );
+      }
+    } catch (err) {
+      if (err && err.message && err.message.includes("context invalidated")) {
+        alert("The extension context was lost. Please reload the page to continue using the MJML editor.");
+      } else {
+        // Log other errors for debugging
+        console.error("[MJML Extension] Content script error:", err);
+      }
     }
   });
 
