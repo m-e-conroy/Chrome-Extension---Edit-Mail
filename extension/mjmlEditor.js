@@ -1,68 +1,233 @@
 // mjmlEditor.js - Handles MJML Editor Modal UI
 (function () {
-    // --- MJML Template CRUD using window.postMessage ---
-    function getTemplates(callback) {
-      window.postMessage({ type: 'GET_MJML_TEMPLATES' }, '*');
-      function handler(event) {
-        if (event.data.type === 'MJML_TEMPLATES_RESULT') {
-          window.removeEventListener('message', handler);
-          callback(event.data.templates || []);
-        }
+  // --- MJML Template CRUD using window.postMessage ---
+  function getTemplates(callback) {
+    window.postMessage({ type: "GET_MJML_TEMPLATES" }, "*");
+    function handler(event) {
+      if (event.data.type === "MJML_TEMPLATES_RESULT") {
+        window.removeEventListener("message", handler);
+        callback(event.data.templates || []);
       }
-      window.addEventListener('message', handler);
     }
+    window.addEventListener("message", handler);
+  }
 
-    function saveTemplate(template, callback) {
-      window.postMessage({ type: 'SAVE_MJML_TEMPLATE', template }, '*');
-      function handler(event) {
-        if (event.data.type === 'SAVE_MJML_TEMPLATE_RESULT') {
-          window.removeEventListener('message', handler);
-          callback && callback();
-        }
+  function saveTemplate(template, callback) {
+    window.postMessage({ type: "SAVE_MJML_TEMPLATE", template }, "*");
+    function handler(event) {
+      if (event.data.type === "SAVE_MJML_TEMPLATE_RESULT") {
+        window.removeEventListener("message", handler);
+        callback && callback();
       }
-      window.addEventListener('message', handler);
     }
+    window.addEventListener("message", handler);
+  }
 
-    function deleteTemplate(name, callback) {
-      window.postMessage({ type: 'DELETE_MJML_TEMPLATE', name }, '*');
-      function handler(event) {
-        if (event.data.type === 'DELETE_MJML_TEMPLATE_RESULT') {
-          window.removeEventListener('message', handler);
-          callback && callback();
-        }
+  function deleteTemplate(name, callback) {
+    window.postMessage({ type: "DELETE_MJML_TEMPLATE", name }, "*");
+    function handler(event) {
+      if (event.data.type === "DELETE_MJML_TEMPLATE_RESULT") {
+        window.removeEventListener("message", handler);
+        callback && callback();
       }
-      window.addEventListener('message', handler);
     }
+    window.addEventListener("message", handler);
+  }
   window.createMJMLModal = createMJMLModal;
 
+  // Premade MJML templates (embedded)
+  const MJML_PREMADE_TEMPLATES = [
+    {
+      name: "Simple Welcome",
+      mjml: `<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text font-size=\"20px\" color=\"#e56a54\">Welcome to our newsletter!</mj-text>\n        <mj-button background-color=\"#e56a54\" color=\"#fff\" href=\"https://example.com\">Learn More</mj-button>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`,
+    },
+    {
+      name: "Product Promo",
+      mjml: `<mjml>\n  <mj-body>\n    <mj-section background-color=\"#f4f4f4\">\n      <mj-column>\n        <mj-image src=\"https://via.placeholder.com/300x100\" alt=\"Product\" />\n        <mj-text font-size=\"18px\">Check out our new product!</mj-text>\n        <mj-button background-color=\"#007bff\" color=\"#fff\" href=\"https://example.com/product\">Shop Now</mj-button>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`,
+    },
+    {
+      name: "Event Invitation",
+      mjml: `<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text font-size=\"22px\" color=\"#333\">You're Invited!</mj-text>\n        <mj-text font-size=\"16px\">Join us for our annual event on January 15th.</mj-text>\n        <mj-button background-color=\"#28a745\" color=\"#fff\" href=\"https://example.com/event\">RSVP</mj-button>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`,
+    },
+    {
+      name: "Newsletter Layout",
+      mjml: `<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column width=\"60%\">\n        <mj-text font-size=\"20px\">Latest News</mj-text>\n        <mj-text>Here's what's new this month...</mj-text>\n      </mj-column>\n      <mj-column width=\"40%\">\n        <mj-image src=\"https://via.placeholder.com/120\" alt=\"News\" />\n      </mj-column>\n    </mj-section>\n    <mj-section>\n      <mj-column>\n        <mj-divider border-color=\"#e56a54\" />\n        <mj-text font-size=\"14px\" color=\"#888\">You received this email because you subscribed to our newsletter.</mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`,
+    },
+  ];
+  
   const MJML_TAGS = [
-    { tag: "mjml", desc: "Root tag for MJML document" },
-    { tag: "mj-head", desc: "Container for head elements (styles, fonts, etc.)" },
-    { tag: "mj-title", desc: "Email title (used in browser preview)" },
-    { tag: "mj-preview", desc: "Preview text shown in inbox preview" },
-    { tag: "mj-attributes", desc: "Set default attributes for MJML tags" },
-    { tag: "mj-style", desc: "Add custom CSS styles" },
-    { tag: "mj-font", desc: "Import web fonts" },
-    { tag: "mj-breakpoint", desc: "Set responsive breakpoint" },
-    { tag: "mj-body", desc: "Main body container for the email" },
-    { tag: "mj-section", desc: "Defines a section in the email" },
-    { tag: "mj-wrapper", desc: "Wrap multiple sections with shared styles" },
-    { tag: "mj-group", desc: "Group columns for responsive layouts" },
-    { tag: "mj-column", desc: "Defines a column within a section" },
-    { tag: "mj-text", desc: "Adds text content" },
-    { tag: "mj-image", desc: "Adds an image" },
-    { tag: "mj-button", desc: "Adds a button" },
-    { tag: "mj-divider", desc: "Horizontal divider line" },
-    { tag: "mj-spacer", desc: "Add vertical space" },
-    { tag: "mj-table", desc: "Insert a table" },
-    { tag: "mj-social", desc: "Social media icons block" },
-    { tag: "mj-social-element", desc: "Individual social icon/link" },
-    { tag: "mj-navbar", desc: "Navigation bar" },
-    { tag: "mj-navbar-link", desc: "Link inside navigation bar" },
-    { tag: "mj-carousel", desc: "Image carousel/slideshow" },
-    { tag: "mj-carousel-image", desc: "Image inside carousel" },
-    { tag: "mj-hero", desc: "Hero section with background image" },
-    { tag: "mj-raw", desc: "Insert raw HTML (use with caution)" },
+    { tag: "mjml", desc: "Root tag for MJML document", props: [] },
+    {
+      tag: "mj-head",
+      desc: "Container for head elements (styles, fonts, etc.)",
+      props: [],
+    },
+    {
+      tag: "mj-title",
+      desc: "Email title (used in browser preview)",
+      props: [],
+    },
+    {
+      tag: "mj-preview",
+      desc: "Preview text shown in inbox preview",
+      props: [],
+    },
+    {
+      tag: "mj-attributes",
+      desc: "Set default attributes for MJML tags",
+      props: [{ name: "mj-class", desc: "Define reusable class attributes" }],
+    },
+    {
+      tag: "mj-style",
+      desc: "Add custom CSS styles",
+      props: [{ name: "inline", desc: "Inline the style" }],
+    },
+    {
+      tag: "mj-font",
+      desc: "Import web fonts",
+      props: [
+        { name: "name", desc: "Font name" },
+        { name: "href", desc: "Font URL" },
+      ],
+    },
+    {
+      tag: "mj-breakpoint",
+      desc: "Set responsive breakpoint",
+      props: [{ name: "width", desc: "Breakpoint width" }],
+    },
+    {
+      tag: "mj-body",
+      desc: "Main body container for the email",
+      props: [
+        { name: "width", desc: "Body width" },
+        { name: "background-color", desc: "Body background color" },
+      ],
+    },
+    {
+      tag: "mj-section",
+      desc: "Defines a section in the email",
+      props: [
+        { name: "background-color", desc: "Section background color" },
+        { name: "padding", desc: "Section padding" },
+      ],
+    },
+    {
+      tag: "mj-wrapper",
+      desc: "Wrap multiple sections with shared styles",
+      props: [{ name: "background-color", desc: "Wrapper background color" }],
+    },
+    {
+      tag: "mj-group",
+      desc: "Group columns for responsive layouts",
+      props: [],
+    },
+    {
+      tag: "mj-column",
+      desc: "Defines a column within a section",
+      props: [{ name: "width", desc: "Column width" }],
+    },
+    {
+      tag: "mj-text",
+      desc: "Adds text content",
+      props: [
+        { name: "color", desc: "Text color" },
+        { name: "font-size", desc: "Font size" },
+        { name: "align", desc: "Text alignment" },
+      ],
+    },
+    {
+      tag: "mj-image",
+      desc: "Adds an image",
+      props: [
+        { name: "src", desc: "Image URL" },
+        { name: "alt", desc: "Alt text" },
+        { name: "width", desc: "Image width" },
+      ],
+    },
+    {
+      tag: "mj-button",
+      desc: "Adds a button",
+      props: [
+        { name: "href", desc: "Button link" },
+        { name: "background-color", desc: "Button background color" },
+        { name: "color", desc: "Button text color" },
+      ],
+    },
+    {
+      tag: "mj-divider",
+      desc: "Horizontal divider line",
+      props: [
+        { name: "border-color", desc: "Divider color" },
+        { name: "border-width", desc: "Divider width" },
+      ],
+    },
+    {
+      tag: "mj-spacer",
+      desc: "Add vertical space",
+      props: [{ name: "height", desc: "Spacer height" }],
+    },
+    {
+      tag: "mj-table",
+      desc: "Insert a table",
+      props: [
+        { name: "color", desc: "Table text color" },
+        { name: "font-size", desc: "Table font size" },
+      ],
+    },
+    {
+      tag: "mj-social",
+      desc: "Social media icons block",
+      props: [
+        { name: "mode", desc: "Layout mode" },
+        { name: "icon-size", desc: "Icon size" },
+      ],
+    },
+    {
+      tag: "mj-social-element",
+      desc: "Individual social icon/link",
+      props: [
+        { name: "name", desc: "Social network name" },
+        { name: "href", desc: "Link URL" },
+      ],
+    },
+    {
+      tag: "mj-navbar",
+      desc: "Navigation bar",
+      props: [{ name: "base-url", desc: "Base URL for links" }],
+    },
+    {
+      tag: "mj-navbar-link",
+      desc: "Link inside navigation bar",
+      props: [
+        { name: "href", desc: "Link URL" },
+        { name: "color", desc: "Link color" },
+      ],
+    },
+    {
+      tag: "mj-carousel",
+      desc: "Image carousel/slideshow",
+      props: [
+        { name: "background-color", desc: "Carousel background" },
+        { name: "tb-width", desc: "Thumbnails width" },
+      ],
+    },
+    {
+      tag: "mj-carousel-image",
+      desc: "Image inside carousel",
+      props: [
+        { name: "src", desc: "Image URL" },
+        { name: "alt", desc: "Alt text" },
+      ],
+    },
+    {
+      tag: "mj-hero",
+      desc: "Hero section with background image",
+      props: [
+        { name: "background-url", desc: "Background image URL" },
+        { name: "height", desc: "Hero height" },
+      ],
+    },
+    { tag: "mj-raw", desc: "Insert raw HTML (use with caution)", props: [] },
   ];
 
   function createMJMLModal() {
@@ -134,28 +299,21 @@
     <div class="mjml-modal-content">
       <div class="mjml-header">
         <div style="font-weight:bold; letter-spacing: 1px; color:#e56a54;">MJML POWER EDITOR</div>
-        <div style="display:flex; align-items:center; gap:12px;">
+        <div style="display:flex; flex-direction:row; align-items:center; gap:12px; margin-left:24px;">
           <select id="mjml-template-dropdown" style="padding:6px 10px; border-radius:4px; background:#252526; color:#fff; border:1px solid #444;">
             <option value="">Load template...</option>
           </select>
-          <button id="mjml-save-template-btn" class="mjml-btn" style="background:#17a2b8;">Save as Template</button>
-          <button id="mjml-delete-template-btn" class="mjml-btn" style="background:#dc3545;">Delete Template</button>
-          <button id="mjml-save-btn" class="mjml-btn">UPDATE CKEDITOR</button>
-          <span class="close-icon" id="mjml-close-x">&times;</span>
+          <select id="mjml-premade-dropdown" style="padding:6px 10px; border-radius:4px; background:#252526; color:#fff; border:1px solid #444;">
+            <option value="">Premade templates...</option>
+          </select>
+          <button id="mjml-save-template-btn" class="mjml-btn" style="background:#17a2b8;" aria-label="Save as Template" title="Save as Template">💾</button>
+          <button id="mjml-delete-template-btn" class="mjml-btn" style="background:#dc3545;" aria-label="Delete Template" title="Delete Template">🗑️</button>
+          <button id="mjml-docs-btn" class="mjml-btn" style="background:#444;" aria-label="MJML Docs" title="MJML Docs">📖</button>
+          <button id="mjml-save-btn" class="mjml-btn" aria-label="Update CKEditor" title="Update CKEditor">✅</button>
+          <span class="close-icon" id="mjml-close-x" aria-label="Close" title="Close">&times;</span>
         </div>
       </div>
       <div class="mjml-main-layout">
-        <div class="mjml-sidebar-docs">
-          <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #eee;">Documentation</h3>
-          ${MJML_TAGS.map(
-            (tag) => `
-            <div class="doc-tag-card">
-              <b>&lt;${tag.tag}&gt;</b>
-              <span style="color:#aaa;">${tag.desc}</span>
-            </div>
-          `
-          ).join("")}
-        </div>
         <div class="editor-container">
           <div id="monaco-editor-instance"></div>
         </div>
@@ -163,69 +321,137 @@
           <iframe id="mjml-preview-frame"></iframe>
         </div>
       </div>
+      <div id="mjml-docs-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:2147483648; background:rgba(30,30,30,0.98);">
+        <div style="position:absolute; top:40px; left:50%; transform:translateX(-50%); width:600px; max-width:95vw; background:#222; color:#eee; border-radius:8px; box-shadow:0 0 32px #000; padding:32px 24px 24px 24px; overflow-y:auto; max-height:80vh;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+            <span style="font-size:1.3rem; font-weight:bold; color:#e56a54;">MJML Tag Reference</span>
+            <button id="mjml-docs-close" class="mjml-btn" style="background:#444;">Close</button>
+          </div>
+          <div style="max-height:60vh; overflow-y:auto;">
+            ${MJML_TAGS.map(
+              (tag) => `
+              <div style="margin-bottom:18px; padding-bottom:12px; border-bottom:1px solid #333;">
+                <div style="font-size:1.1rem; font-weight:bold; color:#e56a54;">&lt;${
+                  tag.tag
+                }&gt;</div>
+                <div style="margin:4px 0 8px 0; color:#ccc;">${tag.desc}</div>
+                ${
+                  tag.props && tag.props.length > 0
+                    ? `<ul style='margin:0 0 0 16px; padding:0; color:#b3e5fc;'>${tag.props
+                        .map((p) => `<li><b>${p.name}</b>: ${p.desc}</li>`)
+                        .join("")}</ul>`
+                    : `<div style='color:#888; font-size:13px;'>No properties</div>`
+                }
+              </div>
+            `
+            ).join("")}
+          </div>
+        </div>
+      </div>
     </div>
   `;
-        // --- Template Dropdown Logic ---
-        function refreshTemplateDropdown(selectedName) {
-          getTemplates(function (templates) {
-            const dropdown = document.getElementById('mjml-template-dropdown');
-            if (!dropdown) return;
-            dropdown.innerHTML = '<option value="">Load template...</option>' +
-              templates.map(t => `<option value="${encodeURIComponent(t.name)}"${selectedName && t.name === selectedName ? ' selected' : ''}>${t.name}</option>`).join('');
+    // Docs button logic
+    setTimeout(function () {
+      var docsBtn = document.getElementById("mjml-docs-btn");
+      var docsModal = document.getElementById("mjml-docs-modal");
+      var docsClose = document.getElementById("mjml-docs-close");
+      if (docsBtn && docsModal && docsClose) {
+        docsBtn.onclick = function () {
+          docsModal.style.display = "block";
+        };
+        docsClose.onclick = function () {
+          docsModal.style.display = "none";
+        };
+      }
+    }, 200);
+    // --- Template Dropdown Logic ---
+    function refreshTemplateDropdown(selectedName) {
+      getTemplates(function (templates) {
+        const dropdown = document.getElementById("mjml-template-dropdown");
+        if (!dropdown) return;
+        dropdown.innerHTML =
+          '<option value="">Load template...</option>' +
+          templates
+            .map(
+              (t) =>
+                `<option value="${encodeURIComponent(t.name)}"${
+                  selectedName && t.name === selectedName ? " selected" : ""
+                }>${t.name}</option>`
+            )
+            .join("");
+      });
+    }
+
+    // Defer event handler attachment to ensure DOM is ready
+    setTimeout(function () {
+      refreshTemplateDropdown();
+
+      var saveBtn = document.getElementById("mjml-save-template-btn");
+      var dropdown = document.getElementById("mjml-template-dropdown");
+      var deleteBtn = document.getElementById("mjml-delete-template-btn");
+
+      if (saveBtn) {
+        saveBtn.onclick = function () {
+          const mjml = window.monacoEditor.getValue();
+          let name = prompt("Template name:");
+          if (!name) return;
+          saveTemplate({ name, mjml }, function () {
+            refreshTemplateDropdown(name);
+            alert("Template saved!");
           });
-        }
+        };
+      }
 
-        // Defer event handler attachment to ensure DOM is ready
-        setTimeout(function () {
-          refreshTemplateDropdown();
+      if (dropdown) {
+        dropdown.onchange = function (e) {
+          const name = decodeURIComponent(e.target.value);
+          if (!name) return;
+          getTemplates(function (templates) {
+            const t = templates.find((tt) => tt.name === name);
+            if (t && window.monacoEditor) {
+              window.monacoEditor.setValue(t.mjml);
+            }
+          });
+        };
+      }
 
-          var saveBtn = document.getElementById('mjml-save-template-btn');
-          var dropdown = document.getElementById('mjml-template-dropdown');
-          var deleteBtn = document.getElementById('mjml-delete-template-btn');
-
-          if (saveBtn) {
-            saveBtn.onclick = function () {
-              const mjml = window.monacoEditor.getValue();
-              let name = prompt('Template name:');
-              if (!name) return;
-              saveTemplate({ name, mjml }, function () {
-                refreshTemplateDropdown(name);
-                alert('Template saved!');
-              });
-            };
+      if (deleteBtn) {
+        deleteBtn.onclick = function () {
+          const dropdown = document.getElementById("mjml-template-dropdown");
+          const name = decodeURIComponent(dropdown.value);
+          if (!name) {
+            alert("Select a template to delete.");
+            return;
           }
-
-          if (dropdown) {
-            dropdown.onchange = function (e) {
-              const name = decodeURIComponent(e.target.value);
-              if (!name) return;
-              getTemplates(function (templates) {
-                const t = templates.find(tt => tt.name === name);
-                if (t && window.monacoEditor) {
-                  window.monacoEditor.setValue(t.mjml);
-                }
-              });
-            };
+          if (confirm('Delete template "' + name + '"?')) {
+            deleteTemplate(name, function () {
+              refreshTemplateDropdown();
+              alert("Template deleted.");
+            });
           }
-
-          if (deleteBtn) {
-            deleteBtn.onclick = function () {
-              const dropdown = document.getElementById('mjml-template-dropdown');
-              const name = decodeURIComponent(dropdown.value);
-              if (!name) {
-                alert('Select a template to delete.');
-                return;
-              }
-              if (confirm('Delete template "' + name + '"?')) {
-                deleteTemplate(name, function () {
-                  refreshTemplateDropdown();
-                  alert('Template deleted.');
-                });
-              }
-            };
-          }
-        }, 100);
+        };
+      }
+    }, 100);
     document.body.appendChild(modal);
+
+    // Populate premade templates dropdown immediately
+    setTimeout(function () {
+      var premadeDropdown = document.getElementById("mjml-premade-dropdown");
+      if (premadeDropdown) {
+        premadeDropdown.innerHTML =
+          '<option value="">Premade templates...</option>' +
+          MJML_PREMADE_TEMPLATES.map(
+            (t, i) => `<option value="${i}">${t.name}</option>`
+          ).join("");
+        premadeDropdown.onchange = function (e) {
+          var idx = e.target.value;
+          if (idx === "" || !MJML_PREMADE_TEMPLATES[idx]) return;
+          if (window.monacoEditor) {
+            window.monacoEditor.setValue(MJML_PREMADE_TEMPLATES[idx].mjml);
+          }
+        };
+      }
+    }, 200);
 
     const closeEditor = () => {
       modal.remove();
