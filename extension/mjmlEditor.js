@@ -38,6 +38,10 @@
   // Premade MJML templates (embedded)
   const MJML_PREMADE_TEMPLATES = [
     {
+      name: "UB Basic",
+      mjml: `<mjml>\n  <mj-body>\n    <mj-section padding=\"0\" background-color=\"#005bbb\">\n      <mj-column>\n        <mj-image src=\"https://ubconnect.buffalo.edu/www/images/UB-Brand-Bar-1200x179.jpg\" padding=\"0\">\n      </mj-column>\n    </mj-section>\n    <mj-section padding=\"0\">\n      <mj-column>\n        <mj-image src=\"https://placehold.co/600x250\" padding=\"0\">\n      </mj-column>\n    </mj-section>\n    <mj-section padding=\"16px 14px\">\n      <mj-column>\n        <mj-text font-family=\"Sofia, Arial, sans-serif\" font-size=\"16px\" line-height=\"24px\" color=\"#666\">\n          Dear {{Preferred}},\n          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam aliquet quis nisl id bibendum. Mauris quam lacus, mattis vitae cursus id, consequat at nisl. Nam scelerisque ligula in iaculis tincidunt. Nam efficitur molestie bibendum. Nulla eget efficitur sem. Etiam est tellus, lacinia at dui sit amet, luctus bibendum orci. Integer gravida mi et nulla blandit, eget tempus eros dignissim. Nulla posuere ipsum vel magna auctor tempus. Donec eget neque leo.</p>\n          <p>Ut nec ipsum sit amet lacus elementum mollis. Nulla nunc tellus, vulputate molestie convallis eu, fringilla ut arcu. Maecenas sit amet ante nulla. Quisque sed lacus porttitor, eleifend nulla eu, condimentum tortor. Curabitur eu quam diam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed consectetur, nisi sit amet condimentum porttitor, elit mauris gravida ex, non tincidunt ex urna in orci. Morbi eget faucibus lectus. Nunc sed augue a est sodales scelerisque. Vivamus sagittis, sem quis imperdiet accumsan, erat elit ornare augue, a laoreet eros dolor quis risus. Mauris vulputate, magna vel tempus fermentum, purus ex tempor massa, vel egestas nisi mauris in ligula. Proin interdum congue lorem nec commodo. Curabitur id scelerisque tellus.</p>\n          <p>Warmest regards,</p>\n          <p><i>The University at Buffalo</i></p>\n        </mj-text>\n      </mj-column>\n    </mj-section>\n    <mj-section padding=\"0\">\n      <mj-column>\n        <mj-image src=\"https://placehold.co/600x150\" padding=\"0\">\n      </mj-column>\n    </mj-section>\n    <mj-section padding=\"0\">\n      <mj-column>\n        <mj-image src=\"https://ubconnect.buffalo.edu/www/images/EmailTemplate_YieldEmails_footer_03.png\" padding=\"0\">\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`
+    },
+    {
       name: "Simple Welcome",
       mjml: `<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text font-size=\"20px\" color=\"#e56a54\">Welcome to our newsletter!</mj-text>\n        <mj-button background-color=\"#e56a54\" color=\"#fff\" href=\"https://example.com\">Learn More</mj-button>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`,
     },
@@ -52,7 +56,7 @@
     {
       name: "Newsletter Layout",
       mjml: `<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column width=\"60%\">\n        <mj-text font-size=\"20px\">Latest News</mj-text>\n        <mj-text>Here's what's new this month...</mj-text>\n      </mj-column>\n      <mj-column width=\"40%\">\n        <mj-image src=\"https://via.placeholder.com/120\" alt=\"News\" />\n      </mj-column>\n    </mj-section>\n    <mj-section>\n      <mj-column>\n        <mj-divider border-color=\"#e56a54\" />\n        <mj-text font-size=\"14px\" color=\"#888\">You received this email because you subscribed to our newsletter.</mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`,
-    },
+    }
   ];
   
   const MJML_TAGS = [
@@ -227,7 +231,7 @@
         { name: "height", desc: "Hero height" },
       ],
     },
-    { tag: "mj-raw", desc: "Insert raw HTML (use with caution)", props: [] },
+    { tag: "mj-raw", desc: "Insert raw HTML (use with caution)", props: [] }
   ];
 
   function createMJMLModal() {

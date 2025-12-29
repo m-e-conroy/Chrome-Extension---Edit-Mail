@@ -1,0 +1,35 @@
+<mjml>
+  <mj-body>
+    <mj-section padding="0" background-color="#005bbb">
+      <mj-column>
+        <mj-image src="https://ubconnect.buffalo.edu/www/images/UB-Brand-Bar-1200x179.jpg" padding="0">
+      </mj-column>
+    </mj-section>
+    <mj-section padding="0">
+      <mj-column>
+        <mj-image src="https://placehold.co/600x250" padding="0">
+      </mj-column>
+    </mj-section>
+    <mj-section padding="16px 14px">
+      <mj-column>
+        <mj-text font-family="Sofia, Arial, sans-serif" font-size="16px" line-height="24px" color="#666">
+          Dear {{Preferred}},
+          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam aliquet quis nisl id bibendum. Mauris quam lacus, mattis vitae cursus id, consequat at nisl. Nam scelerisque ligula in iaculis tincidunt. Nam efficitur molestie bibendum. Nulla eget efficitur sem. Etiam est tellus, lacinia at dui sit amet, luctus bibendum orci. Integer gravida mi et nulla blandit, eget tempus eros dignissim. Nulla posuere ipsum vel magna auctor tempus. Donec eget neque leo.</p>
+          <p>Ut nec ipsum sit amet lacus elementum mollis. Nulla nunc tellus, vulputate molestie convallis eu, fringilla ut arcu. Maecenas sit amet ante nulla. Quisque sed lacus porttitor, eleifend nulla eu, condimentum tortor. Curabitur eu quam diam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed consectetur, nisi sit amet condimentum porttitor, elit mauris gravida ex, non tincidunt ex urna in orci. Morbi eget faucibus lectus. Nunc sed augue a est sodales scelerisque. Vivamus sagittis, sem quis imperdiet accumsan, erat elit ornare augue, a laoreet eros dolor quis risus. Mauris vulputate, magna vel tempus fermentum, purus ex tempor massa, vel egestas nisi mauris in ligula. Proin interdum congue lorem nec commodo. Curabitur id scelerisque tellus.</p>
+          <p>Warmest regards,</p>
+          <p><i>The University at Buffalo</i></p>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="0">
+      <mj-column>
+        <mj-image src="https://placehold.co/600x150" padding="0">
+      </mj-column>
+    </mj-section>
+    <mj-section padding="0">
+      <mj-column>
+        <mj-image src="https://ubconnect.buffalo.edu/www/images/EmailTemplate_YieldEmails_footer_03.png" padding="0">
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
