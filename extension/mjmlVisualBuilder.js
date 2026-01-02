@@ -8,6 +8,7 @@
   let selectedComponentId = null;
   let currentMode = 'visual'; // 'visual', 'code', 'split'
   let draggedComponentType = null;
+  let draggedComponentId = null; // For reordering existing components
   let onTreeChangeCallback = null;
   
   /**
@@ -371,6 +372,37 @@
         color: #e56a54;
       }
       
+      .drag-handle {
+        cursor: grab;
+        color: #666;
+        font-size: 14px;
+        padding: 0 4px;
+        transition: color 0.2s;
+      }
+      
+      .drag-handle:hover {
+        color: #e56a54;
+      }
+      
+      .canvas-component.dragging {
+        opacity: 0.5;
+        border-color: #e56a54;
+      }
+      
+      .reorder-drop-zone {
+        height: 4px;
+        margin: 4px 0;
+        background: transparent;
+        transition: all 0.2s;
+      }
+      
+      .reorder-drop-zone.drag-over {
+        height: 40px;
+        background: rgba(229, 106, 84, 0.1);
+        border: 2px dashed #e56a54;
+        border-radius: 4px;
+      }
+      
       .component-actions {
         display: flex;
         gap: 4px;
@@ -654,11 +686,21 @@
   function setupEventListeners() {
     // Component library drag events
     document.addEventListener('dragstart', (e) => {
+      // Dragging from library
       if (e.target.classList.contains('component-item')) {
         draggedComponentType = e.target.dataset.componentType;
+        draggedComponentId = null;
         e.dataTransfer.effectAllowed = 'copy';
         e.dataTransfer.setData('text/plain', draggedComponentType);
         e.target.style.opacity = '0.5';
+      }
+      // Dragging existing component for reordering
+      else if (e.target.classList.contains('canvas-component')) {
+        draggedComponentId = e.target.dataset.componentId;
+        draggedComponentType = null;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', draggedComponentId);
+        e.target.classList.add('dragging');
       }
     });
     
@@ -666,15 +708,22 @@
       if (e.target.classList.contains('component-item')) {
         e.target.style.opacity = '1';
         draggedComponentType = null;
+      } else if (e.target.classList.contains('canvas-component')) {
+        e.target.classList.remove('dragging');
+        draggedComponentId = null;
       }
+      // Clean up any drag-over states
+      document.querySelectorAll('.drag-over').forEach(el => {
+        el.classList.remove('drag-over');
+      });
     });
     
     // Canvas drop zone events
     document.addEventListener('dragover', (e) => {
       const dropZone = e.target.closest('.canvas-drop-zone, .nested-drop-zone');
-      if (dropZone && draggedComponentType) {
+      if (dropZone && (draggedComponentType || draggedComponentId)) {
         e.preventDefault();
-        e.dataTransfer.dropEffect = 'copy';
+        e.dataTransfer.dropEffect = draggedComponentId ? 'move' : 'copy';
       }
     });
     
@@ -698,16 +747,34 @@
     document.addEventListener('drop', (e) => {
       e.preventDefault();
       const dropZone = e.target.closest('.canvas-drop-zone, .nested-drop-zone');
-      if (dropZone && draggedComponentType) {
+      if (dropZone) {
         dropZone.classList.remove('drag-over');
         
         const parentType = dropZone.dataset.parentType;
         const parentId = dropZone.dataset.parentId;
         
-        if (window.isValidDrop(parentType, draggedComponentType)) {
-          handleComponentDrop(draggedComponentType, parentId);
-        } else {
-          showError(`${draggedComponentType} cannot be added to ${parentType}`);
+        // Handle reordering existing component
+        if (draggedComponentId) {
+          const component = window.findComponentById(currentComponentTree, draggedComponentId);
+          if (component && window.isValidDrop(parentType, component.type)) {
+            if (window.moveComponent(currentComponentTree, draggedComponentId, parentId)) {
+              refreshCanvas();
+              if (onTreeChangeCallback) {
+                onTreeChangeCallback(currentComponentTree);
+              }
+            }
+          } else {
+            showError(`${component?.type || 'Component'} cannot be moved to ${parentType}`);
+          }
+          draggedComponentId = null;
+        }
+        // Handle adding new component from library
+        else if (draggedComponentType) {
+          if (window.isValidDrop(parentType, draggedComponentType)) {
+            handleComponentDrop(draggedComponentType, parentId);
+          } else {
+            showError(`${draggedComponentType} cannot be added to ${parentType}`);
+          }
         }
       }
     });
@@ -806,9 +873,11 @@
       
       let html = `
         <div class="canvas-component ${isSelected ? 'selected' : ''}" 
-             data-component-id="${component.id}">
+             data-component-id="${component.id}"
+             draggable="true">
           <div class="component-header">
             <div class="component-type">
+              <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
               <span>${metadata?.icon || '📦'}</span>
               <span>${component.type}</span>
             </div>

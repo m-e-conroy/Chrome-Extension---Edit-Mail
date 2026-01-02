@@ -484,6 +484,51 @@ const MJML_COMPONENT_REGISTRY = {
     ]
   },
   
+  'mj-accordion-title': {
+    displayName: 'Accordion Title',
+    category: 'advanced',
+    icon: '📋',
+    description: 'Title for accordion item',
+    defaultProps: {
+      'background-color': '#f0f0f0',
+      'color': '#000000',
+      'font-size': '14px'
+    },
+    defaultContent: 'Accordion Title',
+    allowedParents: ['mj-accordion-element'],
+    allowedChildren: [],
+    propertySchema: [
+      { name: 'background-color', type: 'color', label: 'Background Color', default: '#f0f0f0' },
+      { name: 'color', type: 'color', label: 'Text Color', default: '#000000' },
+      { name: 'font-size', type: 'text', label: 'Font Size', default: '14px' },
+      { name: 'font-family', type: 'text', label: 'Font Family', default: 'Arial, sans-serif' },
+      { name: 'padding', type: 'text', label: 'Padding', default: '16px' }
+    ]
+  },
+  
+  'mj-accordion-text': {
+    displayName: 'Accordion Text',
+    category: 'advanced',
+    icon: '📝',
+    description: 'Content for accordion item',
+    defaultProps: {
+      'background-color': '#ffffff',
+      'color': '#000000',
+      'font-size': '13px'
+    },
+    defaultContent: 'Accordion content goes here...',
+    allowedParents: ['mj-accordion-element'],
+    allowedChildren: [],
+    propertySchema: [
+      { name: 'background-color', type: 'color', label: 'Background Color', default: '#ffffff' },
+      { name: 'color', type: 'color', label: 'Text Color', default: '#000000' },
+      { name: 'font-size', type: 'text', label: 'Font Size', default: '13px' },
+      { name: 'font-family', type: 'text', label: 'Font Family', default: 'Arial, sans-serif' },
+      { name: 'line-height', type: 'text', label: 'Line Height', default: '1.6' },
+      { name: 'padding', type: 'text', label: 'Padding', default: '16px' }
+    ]
+  },
+  
   'mj-table': {
     displayName: 'Table',
     category: 'content',

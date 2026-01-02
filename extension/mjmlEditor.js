@@ -39,7 +39,7 @@
   const MJML_PREMADE_TEMPLATES = [
     {
       name: "UB Basic",
-      mjml: `<mjml>\n  <mj-body>\n    <mj-section padding=\"0\" background-color=\"#005bbb\">\n      <mj-column>\n        <mj-image src=\"https://ubconnect.buffalo.edu/www/images/UB-Brand-Bar-1200x179.jpg\" padding=\"0\">\n      </mj-column>\n    </mj-section>\n    <mj-section padding=\"0\">\n      <mj-column>\n        <mj-image src=\"https://placehold.co/600x250\" padding=\"0\">\n      </mj-column>\n    </mj-section>\n    <mj-section padding=\"16px 14px\">\n      <mj-column>\n        <mj-text font-family=\"Sofia, Arial, sans-serif\" font-size=\"16px\" line-height=\"24px\" color=\"#666\">\n          Dear {{Preferred}},\n          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam aliquet quis nisl id bibendum. Mauris quam lacus, mattis vitae cursus id, consequat at nisl. Nam scelerisque ligula in iaculis tincidunt. Nam efficitur molestie bibendum. Nulla eget efficitur sem. Etiam est tellus, lacinia at dui sit amet, luctus bibendum orci. Integer gravida mi et nulla blandit, eget tempus eros dignissim. Nulla posuere ipsum vel magna auctor tempus. Donec eget neque leo.</p>\n          <p>Ut nec ipsum sit amet lacus elementum mollis. Nulla nunc tellus, vulputate molestie convallis eu, fringilla ut arcu. Maecenas sit amet ante nulla. Quisque sed lacus porttitor, eleifend nulla eu, condimentum tortor. Curabitur eu quam diam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed consectetur, nisi sit amet condimentum porttitor, elit mauris gravida ex, non tincidunt ex urna in orci. Morbi eget faucibus lectus. Nunc sed augue a est sodales scelerisque. Vivamus sagittis, sem quis imperdiet accumsan, erat elit ornare augue, a laoreet eros dolor quis risus. Mauris vulputate, magna vel tempus fermentum, purus ex tempor massa, vel egestas nisi mauris in ligula. Proin interdum congue lorem nec commodo. Curabitur id scelerisque tellus.</p>\n          <p>Warmest regards,</p>\n          <p><i>The University at Buffalo</i></p>\n        </mj-text>\n      </mj-column>\n    </mj-section>\n    <mj-section padding=\"0\">\n      <mj-column>\n        <mj-image src=\"https://placehold.co/600x150\" padding=\"0\">\n      </mj-column>\n    </mj-section>\n    <mj-section padding=\"0\">\n      <mj-column>\n        <mj-image src=\"https://ubconnect.buffalo.edu/www/images/EmailTemplate_YieldEmails_footer_03.png\" padding=\"0\">\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`
+      mjml: `<mjml>\n  <mj-body>\n    <mj-section padding=\"0\" background-color=\"#005bbb\">\n      <mj-column>\n        <mj-image src=\"https://ubconnect.buffalo.edu/www/images/UB-Brand-Bar-1200x179.jpg\" padding=\"0\" />\n      </mj-column>\n    </mj-section>\n    <mj-section padding=\"0\">\n      <mj-column>\n        <mj-image src=\"https://placehold.co/600x250\" padding=\"0\" />\n      </mj-column>\n    </mj-section>\n    <mj-section padding=\"16px 14px\">\n      <mj-column>\n        <mj-text font-family=\"Sofia, Arial, sans-serif\" font-size=\"16px\" line-height=\"24px\" color=\"#666\">\n          Dear {{Preferred}},\n          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam aliquet quis nisl id bibendum. Mauris quam lacus, mattis vitae cursus id, consequat at nisl. Nam scelerisque ligula in iaculis tincidunt. Nam efficitur molestie bibendum. Nulla eget efficitur sem. Etiam est tellus, lacinia at dui sit amet, luctus bibendum orci. Integer gravida mi et nulla blandit, eget tempus eros dignissim. Nulla posuere ipsum vel magna auctor tempus. Donec eget neque leo.</p>\n          <p>Ut nec ipsum sit amet lacus elementum mollis. Nulla nunc tellus, vulputate molestie convallis eu, fringilla ut arcu. Maecenas sit amet ante nulla. Quisque sed lacus porttitor, eleifend nulla eu, condimentum tortor. Curabitur eu quam diam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed consectetur, nisi sit amet condimentum porttitor, elit mauris gravida ex, non tincidunt ex urna in orci. Morbi eget faucibus lectus. Nunc sed augue a est sodales scelerisque. Vivamus sagittis, sem quis imperdiet accumsan, erat elit ornare augue, a laoreet eros dolor quis risus. Mauris vulputate, magna vel tempus fermentum, purus ex tempor massa, vel egestas nisi mauris in ligula. Proin interdum congue lorem nec commodo. Curabitur id scelerisque tellus.</p>\n          <p>Warmest regards,</p>\n          <p><i>The University at Buffalo</i></p>\n        </mj-text>\n      </mj-column>\n    </mj-section>\n    <mj-section padding=\"0\">\n      <mj-column>\n        <mj-image src=\"https://placehold.co/600x150\" padding=\"0\" />\n      </mj-column>\n    </mj-section>\n    <mj-section padding=\"0\">\n      <mj-column>\n        <mj-image src=\"https://ubconnect.buffalo.edu/www/images/EmailTemplate_YieldEmails_footer_03.png\" padding=\"0\" />\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`
     },
     {
       name: "Simple Welcome",
@@ -486,20 +486,45 @@
           if (!name) return;
           getTemplates(function (templates) {
             const t = templates.find((tt) => tt.name === name);
-            if (t && window.monacoEditor) {
-              window.monacoEditor.setValue(t.mjml);
+            if (t) {
+              const mjml = t.mjml;
               
-              // Restore mode if saved
+              // Always update the main code editor (source of truth)
+              if (window.monacoEditor) {
+                window.monacoEditor.setValue(mjml);
+              }
+              
+              // Update based on current mode
+              if (currentEditorMode === 'visual' && visualBuilderAPI) {
+                // In visual mode, update the visual builder
+                if (t.componentTree) {
+                  visualBuilderAPI.setComponentTree(t.componentTree);
+                } else {
+                  visualBuilderAPI.setMJML(mjml);
+                }
+              } else if (currentEditorMode === 'split') {
+                // In split mode, update both split editor and visual builder
+                if (window.monacoEditorSplit) {
+                  window.monacoEditorSplit.setValue(mjml);
+                }
+                if (visualBuilderAPI) {
+                  if (t.componentTree) {
+                    visualBuilderAPI.setComponentTree(t.componentTree);
+                  } else {
+                    visualBuilderAPI.setMJML(mjml);
+                  }
+                }
+              }
+              
+              // Force preview update
+              updateLivePreview(mjml);
+              
+              // Restore mode if saved (do this last so the content is already loaded)
               if (t.mode && t.mode !== currentEditorMode) {
                 const modeBtn = document.querySelector(`[data-mode="${t.mode}"]`);
                 if (modeBtn) {
                   modeBtn.click();
                 }
-              }
-              
-              // Restore component tree if available
-              if (t.componentTree && visualBuilderAPI) {
-                visualBuilderAPI.setComponentTree(t.componentTree);
               }
             }
           });
@@ -541,9 +566,26 @@
         premadeDropdown.onchange = function (e) {
           var idx = e.target.value;
           if (idx === "" || !MJML_PREMADE_TEMPLATES[idx]) return;
+          
+          const mjml = MJML_PREMADE_TEMPLATES[idx].mjml;
+          
+          // Update code editor
           if (window.monacoEditor) {
-            window.monacoEditor.setValue(MJML_PREMADE_TEMPLATES[idx].mjml);
+            window.monacoEditor.setValue(mjml);
           }
+          
+          // Update split code editor if exists
+          if (window.monacoEditorSplit) {
+            window.monacoEditorSplit.setValue(mjml);
+          }
+          
+          // Update visual builder if exists
+          if (visualBuilderAPI) {
+            visualBuilderAPI.setMJML(mjml);
+          }
+          
+          // Force preview update
+          updateLivePreview(mjml);
         };
       }
     }, 200);
