@@ -311,19 +311,6 @@
       display: flex;
     }
     
-    .split-view-container {
-      flex: 1; display: none; flex-direction: row;
-    }
-    .split-view-container.active {
-      display: flex;
-    }
-    .split-view-left {
-      flex: 1; border-right: 1px solid #333; overflow: hidden;
-    }
-    .split-view-right {
-      flex: 1; overflow: hidden;
-    }
-    
     .preview-container { flex: 1; background: #f4f4f4; display: flex; flex-direction: column; }
     iframe#mjml-preview-frame { width: 100%; height: 100%; border: none; background: white; }
 
@@ -347,7 +334,6 @@
           <div class="mode-toggle-group">
             <button class="mode-toggle-btn active" data-mode="code">Code</button>
             <button class="mode-toggle-btn" data-mode="visual">Visual</button>
-            <button class="mode-toggle-btn" data-mode="split">Split</button>
           </div>
         </div>
         <div style="display:flex; flex-direction:row; align-items:center; gap:12px;">
@@ -372,16 +358,6 @@
         
         <!-- Visual Builder View -->
         <div id="visual-builder-container"></div>
-        
-        <!-- Split View -->
-        <div class="split-view-container">
-          <div class="split-view-left">
-            <div id="visual-builder-split"></div>
-          </div>
-          <div class="split-view-right">
-            <div id="monaco-editor-split" style="width:100%; height:100%;"></div>
-          </div>
-        </div>
         
         <div class="preview-container">
           <iframe id="mjml-preview-frame"></iframe>
@@ -464,7 +440,7 @@
           
           // Get component tree if in visual mode
           let componentTree = null;
-          if (visualBuilderAPI && (currentEditorMode === 'visual' || currentEditorMode === 'split')) {
+          if (visualBuilderAPI && currentEditorMode === 'visual') {
             componentTree = visualBuilderAPI.getComponentTree();
           }
           
@@ -501,18 +477,6 @@
                   visualBuilderAPI.setComponentTree(t.componentTree);
                 } else {
                   visualBuilderAPI.setMJML(mjml);
-                }
-              } else if (currentEditorMode === 'split') {
-                // In split mode, update both split editor and visual builder
-                if (window.monacoEditorSplit) {
-                  window.monacoEditorSplit.setValue(mjml);
-                }
-                if (visualBuilderAPI) {
-                  if (t.componentTree) {
-                    visualBuilderAPI.setComponentTree(t.componentTree);
-                  } else {
-                    visualBuilderAPI.setMJML(mjml);
-                  }
                 }
               }
               
@@ -574,11 +538,6 @@
             window.monacoEditor.setValue(mjml);
           }
           
-          // Update split code editor if exists
-          if (window.monacoEditorSplit) {
-            window.monacoEditorSplit.setValue(mjml);
-          }
-          
           // Update visual builder if exists
           if (visualBuilderAPI) {
             visualBuilderAPI.setMJML(mjml);
@@ -606,8 +565,6 @@
       // Get MJML from the appropriate editor based on current mode
       if (currentEditorMode === 'visual' && visualBuilderAPI) {
         mjmlCode = visualBuilderAPI.getMJML();
-      } else if (currentEditorMode === 'split' && window.monacoEditorSplit) {
-        mjmlCode = window.monacoEditorSplit.getValue();
       } else {
         mjmlCode = window.monacoEditor.getValue();
       }
@@ -783,12 +740,10 @@
     
     const codeContainer = document.getElementById('code-editor-container');
     const visualContainer = document.getElementById('visual-builder-container');
-    const splitContainer = document.querySelector('.split-view-container');
     
     // Hide all containers
     if (codeContainer) codeContainer.style.display = 'none';
     if (visualContainer) visualContainer.classList.remove('active');
-    if (splitContainer) splitContainer.classList.remove('active');
     
     if (mode === 'code') {
       // Show code editor
@@ -828,59 +783,6 @@
           if (mjml) {
             visualBuilderAPI.setMJML(mjml);
           }
-        }
-      }
-    } else if (mode === 'split') {
-      // Show split view
-      if (splitContainer) {
-        splitContainer.classList.add('active');
-        
-        // Initialize split view visual builder
-        const splitVisualContainer = document.getElementById('visual-builder-split');
-        if (splitVisualContainer && !visualBuilderAPI) {
-          const mjml = window.monacoEditor ? window.monacoEditor.getValue() : '';
-          visualBuilderAPI = window.initVisualBuilder(splitVisualContainer, {
-            initialMJML: mjml,
-            onTreeChange: (tree) => {
-              // Sync to split code editor
-              if (window.monacoEditorSplit) {
-                const mjml = window.wrapWithMjmlDocument(tree);
-                window.monacoEditorSplit.setValue(mjml);
-              }
-              // Update preview
-              const mjml = window.wrapWithMjmlDocument(tree);
-              updateLivePreview(mjml);
-            }
-          });
-        }
-        
-        // Initialize split monaco editor if needed
-        if (!window.monacoEditorSplit) {
-          const splitEditorContainer = document.getElementById('monaco-editor-split');
-          if (splitEditorContainer && window.monaco) {
-            window.monacoEditorSplit = monaco.editor.create(splitEditorContainer, {
-              value: window.monacoEditor ? window.monacoEditor.getValue() : '',
-              language: 'xml',
-              theme: 'vs-dark',
-              automaticLayout: true,
-              minimap: { enabled: false }
-            });
-            
-            // Sync changes
-            window.monacoEditorSplit.onDidChangeModelContent(() => {
-              updateLivePreview(window.monacoEditorSplit.getValue());
-              
-              // Optionally sync to visual builder
-              if (visualBuilderAPI) {
-                const mjml = window.monacoEditorSplit.getValue();
-                visualBuilderAPI.setMJML(mjml);
-              }
-            });
-          }
-        } else {
-          // Sync content
-          const mjml = window.monacoEditor ? window.monacoEditor.getValue() : '';
-          window.monacoEditorSplit.setValue(mjml);
         }
       }
     }
