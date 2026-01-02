@@ -33,6 +33,14 @@
     }
     window.addEventListener("message", handler);
   }
+
+  function getTemplateByUrl(url, callback) {
+    getTemplates(function (templates) {
+      const template = templates.find(t => t.url === url);
+      callback(template);
+    });
+  }
+
   window.createMJMLModal = createMJMLModal;
 
   // Premade MJML templates (embedded)
@@ -47,7 +55,7 @@
     },
     {
       name: "Product Promo",
-      mjml: `<mjml>\n  <mj-body>\n    <mj-section background-color=\"#f4f4f4\">\n      <mj-column>\n        <mj-image src=\"https://via.placeholder.com/300x100\" alt=\"Product\" />\n        <mj-text font-size=\"18px\">Check out our new product!</mj-text>\n        <mj-button background-color=\"#007bff\" color=\"#fff\" href=\"https://example.com/product\">Shop Now</mj-button>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`,
+      mjml: `<mjml>\n  <mj-body>\n    <mj-section background-color="#f4f4f4">\n      <mj-column>\n        <mj-image src="https://placehold.co/300x100" alt="Product" />\n        <mj-text font-size="18px">Check out our new product!</mj-text>\n        <mj-button background-color="#007bff" color="#fff" href="https://example.com/product">Shop Now</mj-button>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`,
     },
     {
       name: "Event Invitation",
@@ -55,7 +63,7 @@
     },
     {
       name: "Newsletter Layout",
-      mjml: `<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column width=\"60%\">\n        <mj-text font-size=\"20px\">Latest News</mj-text>\n        <mj-text>Here's what's new this month...</mj-text>\n      </mj-column>\n      <mj-column width=\"40%\">\n        <mj-image src=\"https://via.placeholder.com/120\" alt=\"News\" />\n      </mj-column>\n    </mj-section>\n    <mj-section>\n      <mj-column>\n        <mj-divider border-color=\"#e56a54\" />\n        <mj-text font-size=\"14px\" color=\"#888\">You received this email because you subscribed to our newsletter.</mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`,
+      mjml: `<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column width=\"60%\">\n        <mj-text font-size=\"20px\">Latest News</mj-text>\n        <mj-text>Here's what's new this month...</mj-text>\n      </mj-column>\n      <mj-column width=\"40%\">\n        <mj-image src=\"https://placehold.co/120\" alt=\"News\" />\n      </mj-column>\n    </mj-section>\n    <mj-section>\n      <mj-column>\n        <mj-divider border-color=\"#e56a54\" />\n        <mj-text font-size=\"14px\" color=\"#888\">You received this email because you subscribed to our newsletter.</mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`,
     }
   ];
   
@@ -448,10 +456,11 @@
             name, 
             mjml,
             componentTree,
-            mode: currentEditorMode
+            mode: currentEditorMode,
+            url: window.location.href
           }, function () {
             refreshTemplateDropdown(name);
-            alert("Template saved!");
+            alert("Template saved and linked to this URL!");
           });
         };
       }
@@ -636,6 +645,30 @@
 
       window.monacoEditor.onDidChangeModelContent(() => {
         updateLivePreview(window.monacoEditor.getValue());
+      });
+
+      // Auto-load template if URL matches
+      getTemplateByUrl(window.location.href, function(template) {
+        if (template) {
+          window.monacoEditor.setValue(template.mjml);
+          
+          // Switch to saved mode if different
+          if (template.mode && template.mode !== currentEditorMode) {
+            setTimeout(() => {
+              const modeBtn = document.querySelector(`[data-mode="${template.mode}"]`);
+              if (modeBtn) {
+                modeBtn.click();
+              }
+            }, 100);
+          } else if (template.mode === 'visual' && visualBuilderAPI) {
+            // If already in visual mode, just update the builder
+            if (template.componentTree) {
+              visualBuilderAPI.setComponentTree(template.componentTree);
+            } else {
+              visualBuilderAPI.setMJML(template.mjml);
+            }
+          }
+        }
       });
     }
   }
