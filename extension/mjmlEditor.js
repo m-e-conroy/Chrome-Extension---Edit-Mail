@@ -239,6 +239,10 @@
     buildModalUI();
   }
 
+  // Global state for editor mode
+  let currentEditorMode = 'code'; // 'visual', 'code', 'split'
+  let visualBuilderAPI = null;
+
   function buildModalUI() {
     const modal = document.createElement("div");
     modal.id = "mjml-editor-modal";
@@ -264,6 +268,22 @@
       padding: 12px 20px; background: #252526; border-bottom: 1px solid #333;
       display: flex; justify-content: space-between; align-items: center;
     }
+    .mjml-header-left {
+      display: flex; align-items: center; gap: 16px;
+    }
+    .mode-toggle-group {
+      display: flex; background: #1e1e1e; border-radius: 4px; padding: 3px;
+      border: 1px solid #444;
+    }
+    .mode-toggle-btn {
+      padding: 6px 14px; background: transparent; border: none;
+      color: #888; cursor: pointer; font-size: 12px; font-weight: 500;
+      border-radius: 3px; transition: all 0.2s;
+    }
+    .mode-toggle-btn:hover { color: #d4d4d4; }
+    .mode-toggle-btn.active {
+      background: #e56a54; color: white;
+    }
     .mjml-main-layout { display: flex; flex: 1; overflow: hidden; height: 100%; }
     
     /* Sidebar styling */
@@ -284,6 +304,26 @@
     }
     #monaco-editor-instance { flex: 1; width: 100%; height: 100%; }
     
+    #visual-builder-container {
+      flex: 1; display: none; width: 100%; height: 100%;
+    }
+    #visual-builder-container.active {
+      display: flex;
+    }
+    
+    .split-view-container {
+      flex: 1; display: none; flex-direction: row;
+    }
+    .split-view-container.active {
+      display: flex;
+    }
+    .split-view-left {
+      flex: 1; border-right: 1px solid #333; overflow: hidden;
+    }
+    .split-view-right {
+      flex: 1; overflow: hidden;
+    }
+    
     .preview-container { flex: 1; background: #f4f4f4; display: flex; flex-direction: column; }
     iframe#mjml-preview-frame { width: 100%; height: 100%; border: none; background: white; }
 
@@ -302,8 +342,15 @@
     <div class="mjml-modal-backdrop"></div>
     <div class="mjml-modal-content">
       <div class="mjml-header">
-        <div style="font-weight:bold; letter-spacing: 1px; color:#e56a54;">MJML POWER EDITOR</div>
-        <div style="display:flex; flex-direction:row; align-items:center; gap:12px; margin-left:24px;">
+        <div class="mjml-header-left">
+          <div style="font-weight:bold; letter-spacing: 1px; color:#e56a54;">MJML POWER EDITOR</div>
+          <div class="mode-toggle-group">
+            <button class="mode-toggle-btn active" data-mode="code">Code</button>
+            <button class="mode-toggle-btn" data-mode="visual">Visual</button>
+            <button class="mode-toggle-btn" data-mode="split">Split</button>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:row; align-items:center; gap:12px;">
           <select id="mjml-template-dropdown" style="padding:6px 10px; border-radius:4px; background:#252526; color:#fff; border:1px solid #444;">
             <option value="">Load template...</option>
           </select>
@@ -318,9 +365,24 @@
         </div>
       </div>
       <div class="mjml-main-layout">
-        <div class="editor-container">
+        <!-- Code Editor View -->
+        <div class="editor-container" id="code-editor-container">
           <div id="monaco-editor-instance"></div>
         </div>
+        
+        <!-- Visual Builder View -->
+        <div id="visual-builder-container"></div>
+        
+        <!-- Split View -->
+        <div class="split-view-container">
+          <div class="split-view-left">
+            <div id="visual-builder-split"></div>
+          </div>
+          <div class="split-view-right">
+            <div id="monaco-editor-split" style="width:100%; height:100%;"></div>
+          </div>
+        </div>
+        
         <div class="preview-container">
           <iframe id="mjml-preview-frame"></iframe>
         </div>
@@ -399,7 +461,19 @@
           const mjml = window.monacoEditor.getValue();
           let name = prompt("Template name:");
           if (!name) return;
-          saveTemplate({ name, mjml }, function () {
+          
+          // Get component tree if in visual mode
+          let componentTree = null;
+          if (visualBuilderAPI && (currentEditorMode === 'visual' || currentEditorMode === 'split')) {
+            componentTree = visualBuilderAPI.getComponentTree();
+          }
+          
+          saveTemplate({ 
+            name, 
+            mjml,
+            componentTree,
+            mode: currentEditorMode
+          }, function () {
             refreshTemplateDropdown(name);
             alert("Template saved!");
           });
@@ -414,6 +488,19 @@
             const t = templates.find((tt) => tt.name === name);
             if (t && window.monacoEditor) {
               window.monacoEditor.setValue(t.mjml);
+              
+              // Restore mode if saved
+              if (t.mode && t.mode !== currentEditorMode) {
+                const modeBtn = document.querySelector(`[data-mode="${t.mode}"]`);
+                if (modeBtn) {
+                  modeBtn.click();
+                }
+              }
+              
+              // Restore component tree if available
+              if (t.componentTree && visualBuilderAPI) {
+                visualBuilderAPI.setComponentTree(t.componentTree);
+              }
             }
           });
         };
@@ -438,7 +525,11 @@
     }, 100);
     document.body.appendChild(modal);
 
-    // Populate premade templates dropdown immediately
+    // Load required scripts for visual builder
+    loadVisualBuilderDependencies(() => {
+      initializeMonaco();
+      setupModeToggle();
+    });
     setTimeout(function () {
       var premadeDropdown = document.getElementById("mjml-premade-dropdown");
       if (premadeDropdown) {
@@ -458,15 +549,26 @@
     }, 200);
 
     const closeEditor = () => {
+      const visualStyles = document.getElementById("mjml-visual-builder-styles");
       modal.remove();
       style.remove();
+      if (visualStyles) visualStyles.remove();
     };
     document.getElementById("mjml-close-x").onclick = closeEditor;
     modal.querySelector(".mjml-modal-backdrop").onclick = closeEditor;
 
     // Inside buildModalUI in mjmlEditor.js
     document.getElementById("mjml-save-btn").onclick = function () {
-      const mjmlCode = window.monacoEditor.getValue();
+      let mjmlCode;
+      
+      // Get MJML from the appropriate editor based on current mode
+      if (currentEditorMode === 'visual' && visualBuilderAPI) {
+        mjmlCode = visualBuilderAPI.getMJML();
+      } else if (currentEditorMode === 'split' && window.monacoEditorSplit) {
+        mjmlCode = window.monacoEditorSplit.getValue();
+      } else {
+        mjmlCode = window.monacoEditor.getValue();
+      }
 
       // First, convert MJML to HTML via the API
       window.convertMJMLWithAPI(mjmlCode, (result) => {
@@ -483,8 +585,10 @@
           // Close the modal
           const modal = document.getElementById("mjml-editor-modal");
           const style = document.getElementById("mjml-modern-styles");
+          const visualStyles = document.getElementById("mjml-visual-builder-styles");
           if (modal) modal.remove();
           if (style) style.remove();
+          if (visualStyles) visualStyles.remove();
         } else {
           alert("Could not save: MJML conversion failed.");
         }
@@ -563,4 +667,180 @@
     };
     window.addEventListener("message", responseHandler);
   };
+  
+  /**
+   * Load visual builder dependencies
+   */
+  function loadVisualBuilderDependencies(callback) {
+    // Get dependency URLs from data attribute (set by content script)
+    const dependencyUrlsJson = document.documentElement.getAttribute('data-mjml-dependencies');
+    if (!dependencyUrlsJson) {
+      console.error('[MJML] Dependency URLs not found. Extension may not be loaded correctly.');
+      return;
+    }
+    
+    const dependencyUrls = JSON.parse(dependencyUrlsJson);
+    
+    let loadedCount = 0;
+    
+    dependencyUrls.forEach(url => {
+      // Extract filename for checking if already loaded
+      const filename = url.split('/').pop();
+      
+      // Check if already loaded
+      if (document.querySelector(`script[src*="${filename}"]`)) {
+        loadedCount++;
+        if (loadedCount === dependencyUrls.length && callback) {
+          callback();
+        }
+        return;
+      }
+      
+      const script = document.createElement('script');
+      script.src = url;
+      script.onload = () => {
+        loadedCount++;
+        if (loadedCount === dependencyUrls.length && callback) {
+          callback();
+        }
+      };
+      script.onerror = () => {
+        console.error(`Failed to load ${file}`);
+        loadedCount++;
+        if (loadedCount === dependencies.length && callback) {
+          callback();
+        }
+      };
+      document.head.appendChild(script);
+    });
+  }
+  
+  /**
+   * Setup mode toggle functionality
+   */
+  function setupModeToggle() {
+    const modeButtons = document.querySelectorAll('.mode-toggle-btn');
+    
+    modeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const newMode = btn.dataset.mode;
+        switchEditorMode(newMode);
+        
+        // Update button states
+        modeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+  }
+  
+  /**
+   * Switch between editor modes
+   */
+  function switchEditorMode(mode) {
+    currentEditorMode = mode;
+    
+    const codeContainer = document.getElementById('code-editor-container');
+    const visualContainer = document.getElementById('visual-builder-container');
+    const splitContainer = document.querySelector('.split-view-container');
+    
+    // Hide all containers
+    if (codeContainer) codeContainer.style.display = 'none';
+    if (visualContainer) visualContainer.classList.remove('active');
+    if (splitContainer) splitContainer.classList.remove('active');
+    
+    if (mode === 'code') {
+      // Show code editor
+      if (codeContainer) codeContainer.style.display = 'flex';
+      
+      // Sync from visual if it exists
+      if (visualBuilderAPI) {
+        const mjml = visualBuilderAPI.getMJML();
+        if (window.monacoEditor && mjml) {
+          window.monacoEditor.setValue(mjml);
+        }
+      }
+    } else if (mode === 'visual') {
+      // Show visual builder
+      if (visualContainer) {
+        visualContainer.classList.add('active');
+        
+        // Initialize visual builder if not already done
+        if (!visualBuilderAPI) {
+          const mjml = window.monacoEditor ? window.monacoEditor.getValue() : '';
+          visualBuilderAPI = window.initVisualBuilder(visualContainer, {
+            initialMJML: mjml,
+            onTreeChange: (tree) => {
+              // Sync to code editor (for when user switches modes)
+              if (window.monacoEditor) {
+                const mjml = window.wrapWithMjmlDocument(tree);
+                window.monacoEditor.setValue(mjml);
+              }
+              // Update preview
+              const mjml = window.wrapWithMjmlDocument(tree);
+              updateLivePreview(mjml);
+            }
+          });
+        } else {
+          // Sync from code editor
+          const mjml = window.monacoEditor ? window.monacoEditor.getValue() : '';
+          if (mjml) {
+            visualBuilderAPI.setMJML(mjml);
+          }
+        }
+      }
+    } else if (mode === 'split') {
+      // Show split view
+      if (splitContainer) {
+        splitContainer.classList.add('active');
+        
+        // Initialize split view visual builder
+        const splitVisualContainer = document.getElementById('visual-builder-split');
+        if (splitVisualContainer && !visualBuilderAPI) {
+          const mjml = window.monacoEditor ? window.monacoEditor.getValue() : '';
+          visualBuilderAPI = window.initVisualBuilder(splitVisualContainer, {
+            initialMJML: mjml,
+            onTreeChange: (tree) => {
+              // Sync to split code editor
+              if (window.monacoEditorSplit) {
+                const mjml = window.wrapWithMjmlDocument(tree);
+                window.monacoEditorSplit.setValue(mjml);
+              }
+              // Update preview
+              const mjml = window.wrapWithMjmlDocument(tree);
+              updateLivePreview(mjml);
+            }
+          });
+        }
+        
+        // Initialize split monaco editor if needed
+        if (!window.monacoEditorSplit) {
+          const splitEditorContainer = document.getElementById('monaco-editor-split');
+          if (splitEditorContainer && window.monaco) {
+            window.monacoEditorSplit = monaco.editor.create(splitEditorContainer, {
+              value: window.monacoEditor ? window.monacoEditor.getValue() : '',
+              language: 'xml',
+              theme: 'vs-dark',
+              automaticLayout: true,
+              minimap: { enabled: false }
+            });
+            
+            // Sync changes
+            window.monacoEditorSplit.onDidChangeModelContent(() => {
+              updateLivePreview(window.monacoEditorSplit.getValue());
+              
+              // Optionally sync to visual builder
+              if (visualBuilderAPI) {
+                const mjml = window.monacoEditorSplit.getValue();
+                visualBuilderAPI.setMJML(mjml);
+              }
+            });
+          }
+        } else {
+          // Sync content
+          const mjml = window.monacoEditor ? window.monacoEditor.getValue() : '';
+          window.monacoEditorSplit.setValue(mjml);
+        }
+      }
+    }
+  }
 })();

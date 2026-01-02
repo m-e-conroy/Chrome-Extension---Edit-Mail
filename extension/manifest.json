@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "CKEditor MJML Email Editor",
-  "version": "0.1.0",
-  "description": "Injects a custom MJML email editor into CKEditor instances on web pages.",
+  "version": "0.2.0",
+  "description": "Injects a custom MJML email editor with drag-and-drop visual builder into CKEditor instances on web pages.",
   "permissions": [
     "activeTab",
     "storage",
@@ -18,6 +18,9 @@
     {
       "resources": [
         "mjmlEditor.js",
+        "mjmlComponents.js",
+        "mjmlTreeUtils.js",
+        "mjmlVisualBuilder.js",
         "inject-mjml.js"
       ],
       "matches": [

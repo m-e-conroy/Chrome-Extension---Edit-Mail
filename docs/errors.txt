@@ -1,0 +1,97 @@
+mjmlTreeUtils.js:17 Unknown component type: mj-body
+createComponent	@	mjmlTreeUtils.js:17
+parseElement	@	mjmlTreeUtils.js:158
+parseElement	@	mjmlTreeUtils.js:152
+mjmlToComponentTree	@	mjmlTreeUtils.js:109
+initVisualBuilder	@	mjmlVisualBuilder.js:24
+switchEditorMode	@	mjmlEditor.js:770
+(anonymous)	@	mjmlEditor.js:727
+
+Chrome Dev Explanation
+
+Explanation
+
+Understanding the problem
+The console error "Unknown component type: mj-body" indicates that the createComponent function was called with "mj-body" as componentType, but the window.getComponentMetadata function did not return any metadata for this type. This suggests that the mj-body component type is not registered or recognized by your application's component registry. The createComponent function relies on getComponentMetadata to retrieve default properties and content for a given component type. Without this metadata, the function cannot properly initialize the component, leading to the error and returning null.
+
+Suggested fix
+To resolve this, ensure that mj-body (and any other MJML components you intend to use) is properly registered with your window.getComponentMetadata system. This typically involves defining the metadata for mj-body (e.g., its default properties and content) and making it accessible through window.getComponentMetadata.
+
+Here's an example of how you might register mj-body and potentially other MJML components:
+
+js
+
+// Assume this is where your component metadata is defined and managed.
+// This is a simplified example; your actual implementation might vary.
+
+// Define metadata for mj-body and other MJML components
+const componentMetadataRegistry = {
+  "mj-body": {
+    defaultProps: {
+      width: "600px", // Example default prop for mj-body
+      "background-color": "#ffffff" // Another example
+    },
+    defaultContent: "" // mj-body typically contains other components, not direct content
+  },
+  "mj-section": {
+    defaultProps: {
+      "background-color": "#f0f0f0"
+    },
+    defaultContent: ""
+  },
+  "mj-column": {
+    defaultProps: {
+      width: "100%"
+    },
+    defaultContent: ""
+  },
+  // Add other MJML components as needed (mj-text, mj-image, etc.)
+};
+
+// Ensure window.getComponentMetadata retrieves from this registry
+window.getComponentMetadata = function(componentType) {
+  return componentMetadataRegistry[componentType];
+};
+
+/**
+ * Generate a unique component ID
+ */
+let componentIdCounter = 0;
+function generateComponentId() {
+  return `comp-${++componentIdCounter}`;
+}
+
+/**
+ * Create a new component instance
+ */
+function createComponent(componentType, properties = {}, children = [], content = '') {
+  const metadata = window.getComponentMetadata(componentType);
+  if (!metadata) {
+    console.error(`Unknown component type: ${componentType}`);
+    return null;
+  }
+  
+  // Merge default properties with provided properties
+  const props = { ...metadata.defaultProps, ...properties };
+  
+  // Use default content if not provided
+  const componentContent = content || metadata.defaultContent || '';
+  
+  return {
+    id: generateComponentId(),
+    type: componentType,
+    properties: props,
+    children: children,
+    content: componentContent
+  };
+}
+
+// Now, calling createComponent with 'mj-body' should work without error
+// createComponent('mj-body');
+
+Use code snippets with caution
+
+This change involves adding the mj-body definition to your componentMetadataRegistry and ensuring window.getComponentMetadata correctly accesses it. You'll need to adapt this example to your specific application's structure for managing component metadata.
+
+Summary
+The error "Unknown component type: mj-body" occurs because the mj-body component's metadata is missing or not accessible through window.getComponentMetadata. To fix this, register mj-body and its default properties and content within your application's component metadata system.

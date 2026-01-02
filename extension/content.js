@@ -2,6 +2,15 @@
 (function () {
   const editorUrl = chrome.runtime.getURL("mjmlEditor.js");
   document.documentElement.setAttribute("data-mjml-url", editorUrl);
+  
+  // Pass dependency URLs to page context
+  const dependencies = [
+    "mjmlComponents.js",
+    "mjmlTreeUtils.js",
+    "mjmlVisualBuilder.js"
+  ];
+  const dependencyUrls = dependencies.map(file => chrome.runtime.getURL(file));
+  document.documentElement.setAttribute("data-mjml-dependencies", JSON.stringify(dependencyUrls));
 
   // Robust bridge for API requests and save commands
   window.addEventListener("message", (event) => {
@@ -18,11 +27,15 @@
               let existing = templates.find(t => t.name === event.data.template.name);
               if (existing) {
                 existing.mjml = event.data.template.mjml;
+                existing.componentTree = event.data.template.componentTree || null;
+                existing.mode = event.data.template.mode || 'code';
                 existing.lastEdited = now;
               } else {
                 let t = Object.assign({}, event.data.template);
                 t.created = now;
                 t.lastEdited = now;
+                t.componentTree = t.componentTree || null;
+                t.mode = t.mode || 'code';
                 templates.push(t);
               }
               chrome.storage.local.set({ templates }, function () {
