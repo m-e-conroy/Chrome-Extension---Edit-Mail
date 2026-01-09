@@ -330,6 +330,14 @@
     .mjml-btn:hover { background: #cf5a45; }
     .close-icon { font-size: 28px; cursor: pointer; color: #888; line-height: 1; }
     .close-icon:hover { color: #ff5f56; }
+    
+    /* Template dropdown styling */
+    #mjml-template-dropdown option,
+    #mjml-premade-dropdown option {
+      background: #2d2d2d;
+      color: #f0f0f0;
+      padding: 8px;
+    }
   `;
     document.head.appendChild(style);
 

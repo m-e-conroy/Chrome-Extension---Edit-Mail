@@ -138,20 +138,25 @@ function parseElement(element) {
     content = directTextNodes.map(node => node.textContent).join('').trim();
   }
   
-  // If it's an HTML-containing element (like mj-table), get innerHTML
-  if (tagName === 'mj-table' || tagName === 'mj-text') {
+  // Components that can contain HTML content (not MJML components)
+  const htmlContentComponents = ['mj-table', 'mj-text', 'mj-button', 'mj-navbar-link'];
+  
+  // If it's an HTML-containing element, get innerHTML and skip parsing children
+  if (htmlContentComponents.includes(tagName)) {
     const htmlContent = element.innerHTML.trim();
     if (htmlContent && !htmlContent.startsWith('<mj-')) {
       content = htmlContent;
     }
   }
   
-  // Parse children
+  // Parse children (but skip for HTML content components)
   const children = [];
-  for (let child of element.children) {
-    const parsed = parseElement(child);
-    if (parsed) {
-      children.push(parsed);
+  if (!htmlContentComponents.includes(tagName)) {
+    for (let child of element.children) {
+      const parsed = parseElement(child);
+      if (parsed) {
+        children.push(parsed);
+      }
     }
   }
   
@@ -212,6 +217,8 @@ function insertComponent(tree, parentId, newComponent, position = 'end') {
     // Insert at root level
     if (position === 'end') {
       tree.push(newComponent);
+    } else if (typeof position === 'number') {
+      tree.splice(position, 0, newComponent);
     } else {
       tree.unshift(newComponent);
     }
@@ -275,18 +282,57 @@ function removeComponent(tree, componentId) {
  * Move a component to a new position
  */
 function moveComponent(tree, componentId, newParentId, position = 'end') {
-  // Find and remove the component
+  // Find the component and its current parent
   const component = findComponentById(tree, componentId);
   if (!component) return false;
+  
+  // Find component's current position
+  let currentParentId = 'root';
+  let currentIndex = -1;
+  
+  // Check if at root level
+  currentIndex = tree.findIndex(c => c.id === componentId);
+  
+  // If not at root, find in nested structure
+  if (currentIndex === -1) {
+    function findParent(nodes, targetId, parentId = 'root') {
+      for (let node of nodes) {
+        if (node.children) {
+          const childIndex = node.children.findIndex(c => c.id === targetId);
+          if (childIndex !== -1) {
+            return { parentId: node.id, index: childIndex };
+          }
+          const result = findParent(node.children, targetId, node.id);
+          if (result) return result;
+        }
+      }
+      return null;
+    }
+    const parentInfo = findParent(tree, componentId);
+    if (parentInfo) {
+      currentParentId = parentInfo.parentId;
+      currentIndex = parentInfo.index;
+    }
+  }
   
   // Clone the component
   const clonedComponent = JSON.parse(JSON.stringify(component));
   
+  // If moving within the same parent and position is a number, adjust for removal
+  let adjustedPosition = position;
+  if (currentParentId === newParentId && typeof position === 'number' && currentIndex !== -1) {
+    // If current position is before target position, decrement target
+    // because removal will shift everything down
+    if (currentIndex < position) {
+      adjustedPosition = position - 1;
+    }
+  }
+  
   // Remove from old location
   if (!removeComponent(tree, componentId)) return false;
   
-  // Insert at new location
-  return insertComponent(tree, newParentId, clonedComponent, position);
+  // Insert at new location with adjusted position
+  return insertComponent(tree, newParentId, clonedComponent, adjustedPosition);
 }
 
 /**

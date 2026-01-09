@@ -472,6 +472,46 @@
         padding: 8px;
       }
       
+      /* Insert Drop Zones (between components) */
+      .insert-drop-zone {
+        height: 8px;
+        margin: 0;
+        position: relative;
+        transition: all 0.2s;
+      }
+      
+      .insert-drop-zone .insert-indicator {
+        height: 2px;
+        background: transparent;
+        margin: 3px 0;
+        border-radius: 2px;
+        transition: all 0.2s;
+      }
+      
+      .insert-drop-zone.drag-over {
+        height: 32px;
+      }
+      
+      .insert-drop-zone.drag-over .insert-indicator {
+        height: 32px;
+        background: rgba(229, 106, 84, 0.1);
+        border: 2px dashed #e56a54;
+        border-radius: 4px;
+        position: relative;
+      }
+      
+      .insert-drop-zone.drag-over .insert-indicator::after {
+        content: '↓ Drop here';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #e56a54;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      
       /* Property Editor Panel */
       .property-editor-panel {
         width: 300px;
@@ -521,11 +561,11 @@
       
       .property-input {
         width: 100%;
-        padding: 8px 10px;
-        background: #1e1e1e;
+        padding: 10px 14px !important;
+        background: #1e1e1e !important;
         border: 1px solid #444;
         border-radius: 4px;
-        color: #d4d4d4;
+        color: #f0f0f0 !important;
         font-size: 13px;
         font-family: inherit;
       }
@@ -533,6 +573,15 @@
       .property-input:focus {
         outline: none;
         border-color: #e56a54;
+        background: #1e1e1e !important;
+      }
+      
+      .property-input:-webkit-autofill,
+      .property-input:-webkit-autofill:hover,
+      .property-input:-webkit-autofill:focus {
+        -webkit-text-fill-color: #f0f0f0 !important;
+        -webkit-box-shadow: 0 0 0 1000px #1e1e1e inset !important;
+        box-shadow: 0 0 0 1000px #1e1e1e inset !important;
       }
       
       .property-input[type="color"] {
@@ -543,24 +592,32 @@
       
       .property-textarea {
         min-height: 80px;
+        padding: 10px 14px !important;
         resize: vertical;
         font-family: 'Courier New', monospace;
       }
       
       .property-select {
         width: 100%;
-        padding: 8px 10px;
-        background: #1e1e1e;
+        padding: 10px 14px;
+        background: #1e1e1e !important;
         border: 1px solid #444;
         border-radius: 4px;
-        color: #d4d4d4;
+        color: #f0f0f0 !important;
         font-size: 13px;
         cursor: pointer;
+      }
+      
+      .property-select option {
+        background: #2d2d2d;
+        color: #f0f0f0;
+        padding: 8px;
       }
       
       .property-select:focus {
         outline: none;
         border-color: #e56a54;
+        background: #1e1e1e !important;
       }
       
       .component-id-display {
@@ -695,12 +752,15 @@
         e.target.style.opacity = '0.5';
       }
       // Dragging existing component for reordering
-      else if (e.target.classList.contains('canvas-component')) {
-        draggedComponentId = e.target.dataset.componentId;
-        draggedComponentType = null;
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', draggedComponentId);
-        e.target.classList.add('dragging');
+      else {
+        const canvasComponent = e.target.closest('.canvas-component');
+        if (canvasComponent) {
+          draggedComponentId = canvasComponent.dataset.componentId;
+          draggedComponentType = null;
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', draggedComponentId);
+          canvasComponent.classList.add('dragging');
+        }
       }
     });
     
@@ -708,9 +768,12 @@
       if (e.target.classList.contains('component-item')) {
         e.target.style.opacity = '1';
         draggedComponentType = null;
-      } else if (e.target.classList.contains('canvas-component')) {
-        e.target.classList.remove('dragging');
-        draggedComponentId = null;
+      } else {
+        const canvasComponent = e.target.closest('.canvas-component');
+        if (canvasComponent) {
+          canvasComponent.classList.remove('dragging');
+          draggedComponentId = null;
+        }
       }
       // Clean up any drag-over states
       document.querySelectorAll('.drag-over').forEach(el => {
@@ -720,7 +783,10 @@
     
     // Canvas drop zone events
     document.addEventListener('dragover', (e) => {
-      const dropZone = e.target.closest('.canvas-drop-zone, .nested-drop-zone');
+      // Find the most specific drop zone (prioritize insert, then nested, then canvas)
+      const dropZone = e.target.closest('.insert-drop-zone') || 
+                       e.target.closest('.nested-drop-zone') || 
+                       e.target.closest('.canvas-drop-zone');
       if (dropZone && (draggedComponentType || draggedComponentId)) {
         e.preventDefault();
         e.dataTransfer.dropEffect = draggedComponentId ? 'move' : 'copy';
@@ -728,7 +794,10 @@
     });
     
     document.addEventListener('dragenter', (e) => {
-      const dropZone = e.target.closest('.canvas-drop-zone, .nested-drop-zone');
+      // Find the most specific drop zone (prioritize insert, then nested, then canvas)
+      const dropZone = e.target.closest('.insert-drop-zone') || 
+                       e.target.closest('.nested-drop-zone') || 
+                       e.target.closest('.canvas-drop-zone');
       if (dropZone && draggedComponentType) {
         const parentType = dropZone.dataset.parentType;
         if (window.isValidDrop(parentType, draggedComponentType)) {
@@ -738,7 +807,10 @@
     });
     
     document.addEventListener('dragleave', (e) => {
-      const dropZone = e.target.closest('.canvas-drop-zone, .nested-drop-zone');
+      // Find the most specific drop zone (prioritize insert, then nested, then canvas)
+      const dropZone = e.target.closest('.insert-drop-zone') || 
+                       e.target.closest('.nested-drop-zone') || 
+                       e.target.closest('.canvas-drop-zone');
       if (dropZone && !dropZone.contains(e.relatedTarget)) {
         dropZone.classList.remove('drag-over');
       }
@@ -746,18 +818,22 @@
     
     document.addEventListener('drop', (e) => {
       e.preventDefault();
-      const dropZone = e.target.closest('.canvas-drop-zone, .nested-drop-zone');
+      // Find the most specific drop zone (prioritize insert, then nested, then canvas)
+      const dropZone = e.target.closest('.insert-drop-zone') || 
+                       e.target.closest('.nested-drop-zone') || 
+                       e.target.closest('.canvas-drop-zone');
       if (dropZone) {
         dropZone.classList.remove('drag-over');
         
         const parentType = dropZone.dataset.parentType;
         const parentId = dropZone.dataset.parentId;
+        const position = dropZone.dataset.position ? parseInt(dropZone.dataset.position) : 'end';
         
         // Handle reordering existing component
         if (draggedComponentId) {
           const component = window.findComponentById(currentComponentTree, draggedComponentId);
           if (component && window.isValidDrop(parentType, component.type)) {
-            if (window.moveComponent(currentComponentTree, draggedComponentId, parentId)) {
+            if (window.moveComponent(currentComponentTree, draggedComponentId, parentId, position)) {
               refreshCanvas();
               if (onTreeChangeCallback) {
                 onTreeChangeCallback(currentComponentTree);
@@ -771,7 +847,7 @@
         // Handle adding new component from library
         else if (draggedComponentType) {
           if (window.isValidDrop(parentType, draggedComponentType)) {
-            handleComponentDrop(draggedComponentType, parentId);
+            handleComponentDrop(draggedComponentType, parentId, position);
           } else {
             showError(`${draggedComponentType} cannot be added to ${parentType}`);
           }
@@ -817,10 +893,10 @@
   /**
    * Handle component drop onto canvas
    */
-  function handleComponentDrop(componentType, parentId) {
+  function handleComponentDrop(componentType, parentId, position = 'end') {
     const newComponent = window.createComponent(componentType);
     
-    if (window.insertComponent(currentComponentTree, parentId, newComponent)) {
+    if (window.insertComponent(currentComponentTree, parentId, newComponent, position)) {
       refreshCanvas();
       // Auto-select the newly added component
       selectedComponentId = newComponent.id;
@@ -866,12 +942,22 @@
   /**
    * Render component tree recursively
    */
-  function renderComponentTree(tree) {
-    return tree.map(component => {
+  function renderComponentTree(tree, parentId = 'root', parentType = 'mj-body') {
+    return tree.map((component, index) => {
       const metadata = window.getComponentMetadata(component.type);
       const isSelected = component.id === selectedComponentId;
       
+      // Add insert drop zone before each component
       let html = `
+        <div class="insert-drop-zone" 
+             data-parent-id="${parentId}" 
+             data-parent-type="${parentType}"
+             data-position="${index}">
+          <div class="insert-indicator"></div>
+        </div>
+      `;
+      
+      html += `
         <div class="canvas-component ${isSelected ? 'selected' : ''}" 
              data-component-id="${component.id}"
              draggable="true">
@@ -911,14 +997,15 @@
         
         // Render existing children
         if (component.children && component.children.length > 0) {
-          html += renderComponentTree(component.children);
+          html += renderComponentTree(component.children, component.id, component.type);
         }
         
-        // Always show drop zone for adding more children
+        // Always show drop zone for adding more children at the end
         html += `
           <div class="nested-drop-zone" 
                data-parent-id="${component.id}" 
-               data-parent-type="${component.type}">
+               data-parent-type="${component.type}"
+               data-position="end">
             <div class="nested-drop-zone-label">
               ${component.children && component.children.length > 0 ? '+' : 'Drop'} ${metadata.allowedChildren.join(', ')} here
             </div>
