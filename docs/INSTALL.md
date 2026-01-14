@@ -6,7 +6,7 @@
 
 2. **Open Chrome Extensions page**:
   - Navigate to `chrome://extensions/` in your browser
-  - Or click the three-dot menu → **More tools** → **Extensions**
+  - Or click the three-dot menu → **Extensions** → **Manage Extensions**
 
 3. **Enable Developer Mode**:
   - Toggle the **Developer mode** switch in the top-right corner
@@ -18,7 +18,7 @@
 
 5. **Verify installation**:
   - The extension should now appear in your extensions list
-  - Pin it to your toolbar if needed by clicking the puzzle icon and selecting the pin
+  - Pin it to your toolbar if needed by clicking **Details** and then turning on **Pin to toolbar**
 
 ## Troubleshooting
 
