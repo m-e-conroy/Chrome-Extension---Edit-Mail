@@ -3,24 +3,43 @@
   // --- MJML Template CRUD using window.postMessage ---
   function getTemplates(callback) {
     window.postMessage({ type: "GET_MJML_TEMPLATES" }, "*");
+    let responded = false;
     function handler(event) {
       if (event.data.type === "MJML_TEMPLATES_RESULT") {
+        responded = true;
         window.removeEventListener("message", handler);
         callback(event.data.templates || []);
       }
     }
     window.addEventListener("message", handler);
+    // Timeout fallback in case message handler not ready
+    setTimeout(() => {
+      if (!responded) {
+        window.removeEventListener("message", handler);
+        console.warn('[MJML] Template fetch timed out, returning empty array');
+        callback([]);
+      }
+    }, 1000);
   }
 
   function saveTemplate(template, callback) {
     window.postMessage({ type: "SAVE_MJML_TEMPLATE", template }, "*");
+    let responded = false;
     function handler(event) {
       if (event.data.type === "SAVE_MJML_TEMPLATE_RESULT") {
+        responded = true;
         window.removeEventListener("message", handler);
         callback && callback();
       }
     }
     window.addEventListener("message", handler);
+    setTimeout(() => {
+      if (!responded) {
+        window.removeEventListener("message", handler);
+        console.warn('[MJML] Template save timed out');
+        callback && callback();
+      }
+    }, 1000);
   }
 
   function deleteTemplate(name, callback) {
@@ -422,11 +441,19 @@
         };
       }
     }, 200);
+    
     // --- Template Dropdown Logic ---
-    function refreshTemplateDropdown(selectedName) {
+    // Define refreshTemplateDropdown at buildModalUI scope so it's accessible everywhere
+    function refreshTemplateDropdown(selectedName, retryCount = 0) {
       getTemplates(function (templates) {
         const dropdown = document.getElementById("mjml-template-dropdown");
-        if (!dropdown) return;
+        if (!dropdown) {
+          // Retry if dropdown not ready yet
+          if (retryCount < 5) {
+            setTimeout(() => refreshTemplateDropdown(selectedName, retryCount + 1), 100);
+          }
+          return;
+        }
         dropdown.innerHTML =
           '<option value="">Load template...</option>' +
           templates
@@ -442,7 +469,8 @@
 
     // Defer event handler attachment to ensure DOM is ready
     setTimeout(function () {
-      refreshTemplateDropdown();
+      // Delay initial load to ensure content script message handler is ready
+      setTimeout(() => refreshTemplateDropdown(), 200);
 
       var saveBtn = document.getElementById("mjml-save-template-btn");
       var dropdown = document.getElementById("mjml-template-dropdown");
@@ -460,15 +488,17 @@
             componentTree = visualBuilderAPI.getComponentTree();
           }
           
+          const currentUrl = window.location.href;
           saveTemplate({ 
             name, 
             mjml,
             componentTree,
             mode: currentEditorMode,
-            url: window.location.href
+            url: currentUrl
           }, function () {
             refreshTemplateDropdown(name);
-            alert("Template saved and linked to this URL!");
+            console.log('[MJML] Template saved and linked to:', currentUrl);
+            alert(`Template "${name}" saved!\n\nThis template will automatically load when you open the MJML editor on this page.`);
           });
         };
       }
@@ -611,74 +641,110 @@
       });
     };
 
-    initializeMonaco();
-  }
+    // Inside mjmlEditor.js - moved inside buildModalUI for scope access
+    function initializeMonaco() {
+      const container = document.getElementById("monaco-editor-instance");
+      if (!container) return;
 
-  // Inside mjmlEditor.js
-  function initializeMonaco() {
-    const container = document.getElementById("monaco-editor-instance");
-    if (!container) return;
+      // If Monaco is already loaded, just create the editor
+      if (window.monaco && window.monaco.editor) {
+        createEditorInstance();
+        return;
+      }
 
-    // If Monaco is already loaded, just create the editor
-    if (window.monaco && window.monaco.editor) {
-      createEditorInstance();
-      return;
-    }
+      // Otherwise, load the script
+      const script = document.createElement("script");
+      script.src =
+        "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js";
+      script.onload = () => {
+        require.config({
+          paths: {
+            vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs",
+          },
+        });
+        require(["vs/editor/editor.main"], createEditorInstance);
+      };
+      document.head.appendChild(script);
 
-    // Otherwise, load the script
-    const script = document.createElement("script");
-    script.src =
-      "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js";
-    script.onload = () => {
-      require.config({
-        paths: {
-          vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs",
-        },
-      });
-      require(["vs/editor/editor.main"], createEditorInstance);
-    };
-    document.head.appendChild(script);
+      function createEditorInstance() {
+        window.monacoEditor = monaco.editor.create(container, {
+          value: `<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text font-size="20px" color="#e56a54">Hello World</mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`,
+          language: "xml",
+          theme: "vs-dark",
+          automaticLayout: true,
+          minimap: { enabled: false },
+        });
 
-    function createEditorInstance() {
-      window.monacoEditor = monaco.editor.create(container, {
-        value: `<mjml>\n  <mj-body>\n    <mj-section>\n      <mj-column>\n        <mj-text font-size="20px" color="#e56a54">Hello World</mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>`,
-        language: "xml",
-        theme: "vs-dark",
-        automaticLayout: true,
-        minimap: { enabled: false },
-      });
-
-      // Ensure the preview renders immediately
-      updateLivePreview(window.monacoEditor.getValue());
-
-      window.monacoEditor.onDidChangeModelContent(() => {
+        // Ensure the preview renders immediately
         updateLivePreview(window.monacoEditor.getValue());
-      });
 
-      // Auto-load template if URL matches
-      getTemplateByUrl(window.location.href, function(template) {
-        if (template) {
-          window.monacoEditor.setValue(template.mjml);
-          
-          // Switch to saved mode if different
-          if (template.mode && template.mode !== currentEditorMode) {
-            setTimeout(() => {
-              const modeBtn = document.querySelector(`[data-mode="${template.mode}"]`);
-              if (modeBtn) {
-                modeBtn.click();
-              }
-            }, 100);
-          } else if (template.mode === 'visual' && visualBuilderAPI) {
-            // If already in visual mode, just update the builder
-            if (template.componentTree) {
-              visualBuilderAPI.setComponentTree(template.componentTree);
-            } else {
-              visualBuilderAPI.setMJML(template.mjml);
+        window.monacoEditor.onDidChangeModelContent(() => {
+          updateLivePreview(window.monacoEditor.getValue());
+        });
+
+        // Auto-load template if URL matches
+        getTemplateByUrl(window.location.href, function(template) {
+          if (template) {
+            console.log('[MJML] Auto-loading template for this URL:', template.name);
+            window.monacoEditor.setValue(template.mjml);
+            
+            // Update preview with retry logic to ensure it renders
+            let retryCount = 0;
+            const maxRetries = 3;
+            
+            function tryUpdatePreview() {
+              console.log('[MJML] Attempting to render preview (attempt ' + (retryCount + 1) + ')');
+              
+              window.convertMJMLWithAPI(template.mjml, (result) => {
+                if (result && result.html) {
+                  console.log('[MJML] Preview rendered successfully');
+                  const previewFrame = document.getElementById("mjml-preview-frame");
+                  if (previewFrame) {
+                    const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                    doc.open();
+                    doc.write(result.html);
+                    doc.close();
+                  }
+                } else if (retryCount < maxRetries) {
+                  retryCount++;
+                  console.warn('[MJML] Preview render failed, retrying...');
+                  setTimeout(tryUpdatePreview, 500);
+                } else {
+                  console.error('[MJML] Preview render failed after ' + maxRetries + ' attempts');
+                }
+              });
             }
+            
+            // Start first attempt after short delay
+            setTimeout(tryUpdatePreview, 300);
+            
+            // Refresh dropdown with this template selected
+            refreshTemplateDropdown(template.name);
+            
+            // Switch to saved mode if different
+            if (template.mode && template.mode !== currentEditorMode) {
+              setTimeout(() => {
+                const modeBtn = document.querySelector(`[data-mode="${template.mode}"]`);
+                if (modeBtn) {
+                  modeBtn.click();
+                }
+              }, 100);
+            } else if (template.mode === 'visual' && visualBuilderAPI) {
+              // If already in visual mode, just update the builder
+              if (template.componentTree) {
+                visualBuilderAPI.setComponentTree(template.componentTree);
+              } else {
+                visualBuilderAPI.setMJML(template.mjml);
+              }
+            }
+          } else {
+            console.log('[MJML] No template associated with this URL');
           }
-        }
-      });
+        });
+      }
     }
+
+    initializeMonaco();
   }
 
   function updateLivePreview(mjml) {

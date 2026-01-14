@@ -14,44 +14,47 @@
 
   // Robust bridge for API requests and save commands
   window.addEventListener("message", (event) => {
-          // 3. MJML Template CRUD (Save, Get, Delete)
-          if (event.data.type === "GET_MJML_TEMPLATES") {
-            chrome.storage.local.get(['templates'], function (result) {
-              window.postMessage({ type: 'MJML_TEMPLATES_RESULT', templates: result.templates || [] }, '*');
-            });
-          }
-          if (event.data.type === "SAVE_MJML_TEMPLATE") {
-            chrome.storage.local.get(['templates'], function (result) {
-              let templates = result.templates || [];
-              const now = new Date().toISOString();
-              let existing = templates.find(t => t.name === event.data.template.name);
-              if (existing) {
-                existing.mjml = event.data.template.mjml;
-                existing.componentTree = event.data.template.componentTree || null;
-                existing.mode = event.data.template.mode || 'code';
-                existing.lastEdited = now;
-              } else {
-                let t = Object.assign({}, event.data.template);
-                t.created = now;
-                t.lastEdited = now;
-                t.componentTree = t.componentTree || null;
-                t.mode = t.mode || 'code';
-                templates.push(t);
-              }
-              chrome.storage.local.set({ templates }, function () {
-                window.postMessage({ type: 'SAVE_MJML_TEMPLATE_RESULT' }, '*');
-              });
-            });
-          }
-          if (event.data.type === "DELETE_MJML_TEMPLATE") {
-            chrome.storage.local.get(['templates'], function (result) {
-              let templates = (result.templates || []).filter(t => t.name !== event.data.name);
-              chrome.storage.local.set({ templates }, function () {
-                window.postMessage({ type: 'DELETE_MJML_TEMPLATE_RESULT' }, '*');
-              });
-            });
-          }
     try {
+      // 3. MJML Template CRUD (Save, Get, Delete)
+      if (event.data.type === "GET_MJML_TEMPLATES") {
+        chrome.storage.local.get(['templates'], function (result) {
+          window.postMessage({ type: 'MJML_TEMPLATES_RESULT', templates: result.templates || [] }, '*');
+        });
+        return;
+      }
+      if (event.data.type === "SAVE_MJML_TEMPLATE") {
+        chrome.storage.local.get(['templates'], function (result) {
+          let templates = result.templates || [];
+          const now = new Date().toISOString();
+          let existing = templates.find(t => t.name === event.data.template.name);
+          if (existing) {
+            existing.mjml = event.data.template.mjml;
+            existing.componentTree = event.data.template.componentTree || null;
+            existing.mode = event.data.template.mode || 'code';
+            existing.lastEdited = now;
+          } else {
+            let t = Object.assign({}, event.data.template);
+            t.created = now;
+            t.lastEdited = now;
+            t.componentTree = t.componentTree || null;
+            t.mode = t.mode || 'code';
+            templates.push(t);
+          }
+          chrome.storage.local.set({ templates }, function () {
+            window.postMessage({ type: 'SAVE_MJML_TEMPLATE_RESULT' }, '*');
+          });
+        });
+        return;
+      }
+      if (event.data.type === "DELETE_MJML_TEMPLATE") {
+        chrome.storage.local.get(['templates'], function (result) {
+          let templates = (result.templates || []).filter(t => t.name !== event.data.name);
+          chrome.storage.local.set({ templates }, function () {
+            window.postMessage({ type: 'DELETE_MJML_TEMPLATE_RESULT' }, '*');
+          });
+        });
+        return;
+      }
       // 1. Forward MJML Render requests to background.js
       if (event.data.type === "MJML_API_REQUEST") {
         if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
